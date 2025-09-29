@@ -1,5 +1,9 @@
 #include "Module.h"
 
+#define ENA 15
+#define IN1 14
+#define IN2 13
+
 // Module object creation
 SpiceDispenser spicedis;
 Hopper hopper;
@@ -17,12 +21,26 @@ bool stringcmp = false;
 void setup()
 {
     Serial.begin(115200);
+    Serial1.begin(115200, SERIAL_8N1, 18, 17);
     strip.begin();
     strip.show();
+    pinMode(ENA,OUTPUT);
+    pinMode(IN1,OUTPUT);
+    pinMode(IN2,OUTPUT);
 }
 
 void loop()
-{
+{   
+    if (Serial1.available() > 0) {
+    Serial1.setTimeout(100);
+    String inputString = Serial1.readString();
+    inputString.trim();
+    
+    if (inputString.length() > 0) {
+      Serial.println(inputString);
+      stringcmp = true;
+    }
+  }
     if (stringcmp)
     {
         if (inputString.startsWith("MODULE:"))
@@ -37,19 +55,20 @@ void loop()
         stringcmp = false;
     }
 }
-
+/*
 void serialEvent()
 {
-    while (Serial.available())
-    {
-        char inChar = (char)Serial.read();
-        inputString += inChar;
-        if (inChar == '\n' || inChar == '\r')
-        {
-            stringcmp = true;
-        }
+    if (Serial1.available() > 0) {
+    Serial1.setTimeout(100);
+    String inputString = Serial1.readString();
+    inputString.trim();
+    
+    if (inputString.length() > 0) {
+      Serial.println(inputString);
+      stringcmp = true;
     }
-}
+  }
+}*/
 
 void parseAndExecute(String command)
 {
@@ -121,7 +140,10 @@ void parseAndExecute(String command)
         else if (name == "stirrer")
         {
           stirrer.start();
+          delay(5000);
+          stirrer.stop();
           Serial.println(String("Status: ")+StepIndex+" Done");
+          
         }
         else
         {
