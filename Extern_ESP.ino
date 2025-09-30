@@ -1,8 +1,10 @@
 #include "Module.h"
+#include "HX711.h"
+#include "globals.h"
 
-#define ENA 15
-#define IN1 14
-#define IN2 13
+HX711 scale;
+float calibration_factor = -7050;
+
 
 // Module object creation
 SpiceDispenser spicedis;
@@ -22,23 +24,57 @@ void setup()
 {
     Serial.begin(115200);
     Serial1.begin(115200, SERIAL_8N1, 18, 17);
-    strip.begin();
-    strip.show();
+    
+
+    // stirrer
     pinMode(ENA,OUTPUT);
     pinMode(IN1,OUTPUT);
     pinMode(IN2,OUTPUT);
+
+    //spice dispenser
+    pinMode(DIR_PIN, OUTPUT);
+    pinMode(STEP_PIN, OUTPUT);
+    pinMode(IN1_PIN, OUTPUT);
+    pinMode(IN2_PIN, OUTPUT);
+    pinMode(IN3_PIN, OUTPUT);
+    pinMode(IN4_PIN, OUTPUT);
+    pinMode(ENA_PIN, OUTPUT);
+    pinMode(ENB_PIN, OUTPUT);
+
+    scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+    scale.set_scale(calibration_factor);
+    scale.tare();
+
+    // Set pump pins as OUTPUT
+    pinMode(PUMP1_PIN, OUTPUT);
+    pinMode(PUMP2_PIN, OUTPUT);
+    pinMode(PUMP3_PIN, OUTPUT);
+    pinMode(PUMP4_PIN, OUTPUT);
+    pinMode(PUMP5_PIN, OUTPUT);
+    pinMode(PUMP6_PIN, OUTPUT);
+    pinMode(PUMP7_PIN, OUTPUT);
+
+    // Ensure all pumps are OFF initially
+    digitalWrite(PUMP1_PIN, LOW);
+    digitalWrite(PUMP2_PIN, LOW);
+    digitalWrite(PUMP3_PIN, LOW);
+    digitalWrite(PUMP4_PIN, LOW);
+    digitalWrite(PUMP5_PIN, LOW);
+    digitalWrite(PUMP6_PIN, LOW);
+    digitalWrite(PUMP7_PIN, LOW);
+  
 }
 
 void loop()
 {   
     if (Serial1.available() > 0) {
     Serial1.setTimeout(100);
-    String inputString = Serial1.readString();
+    inputString = Serial1.readString();
     inputString.trim();
-    
+    stringcmp = true;
     if (inputString.length() > 0) {
       Serial.println(inputString);
-      stringcmp = true;
+      
     }
   }
     if (stringcmp)
@@ -55,20 +91,6 @@ void loop()
         stringcmp = false;
     }
 }
-/*
-void serialEvent()
-{
-    if (Serial1.available() > 0) {
-    Serial1.setTimeout(100);
-    String inputString = Serial1.readString();
-    inputString.trim();
-    
-    if (inputString.length() > 0) {
-      Serial.println(inputString);
-      stringcmp = true;
-    }
-  }
-}*/
 
 void parseAndExecute(String command)
 {
@@ -116,6 +138,7 @@ void parseAndExecute(String command)
             if (id >= 0) liqdis.id = id;
             if (value >= 0) liqdis.vol = value;
             liqdis.start();
+            liqdis.stop();
             Serial.println(String("Status: ")+StepIndex+" Done");
         }
         else if (name == "spice")
