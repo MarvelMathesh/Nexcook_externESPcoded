@@ -40,6 +40,11 @@ void setup()
     pinMode(IN4_PIN, OUTPUT);
     pinMode(ENA_PIN, OUTPUT);
     pinMode(ENB_PIN, OUTPUT);
+    
+    //hopper motor
+    pinMode(ENC_PIN, OUTPUT);
+    pinMode(INC1_PIN, OUTPUT);
+    pinMode(INC2_PIN, OUTPUT);
 
     scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
     scale.set_scale(calibration_factor);
