@@ -26,8 +26,13 @@ extern HX711 scale;  // Declare the external variable
 #define IN3_PIN 35
 #define IN4_PIN 34	
 
-#define LOADCELL_DOUT_PIN 41
-#define LOADCELL_SCK_PIN  40
+// L298N Motor C (Hopper)
+#define ENC_PIN 40
+#define INC1_PIN 41
+#define INC2_PIN 42
+
+#define LOADCELL_DOUT_PIN 45
+#define LOADCELL_SCK_PIN  46
 
 //pumps
 #define PUMP1_PIN 23
