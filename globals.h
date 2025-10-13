@@ -4,7 +4,7 @@
 
 #include "HX711.h"
 
-extern HX711 scale;  // Declare the external variable
+//extern HX711 scale;  // Declare the external variable
 
 //cooktop stirrer pin definitions
 #define ENA 15
@@ -13,12 +13,12 @@ extern HX711 scale;  // Declare the external variable
 
 //Spice dispenser pin definitions
 // Stepper driver (A4988)
-#define DIR_PIN   26
-#define STEP_PIN  21
+#define DIR_PIN   21
+#define STEP_PIN  26
 
 // L298N Motor A
-#define ENA_PIN  38
-#define IN1_PIN  37
+#define ENA_PIN  37
+#define IN1_PIN  38
 #define IN2_PIN  36   
 
 // L298N Motor B
@@ -36,7 +36,7 @@ extern HX711 scale;  // Declare the external variable
 
 //pumps
 #define PUMP1_PIN 23
-#define PUMP2_PIN 18
+#define PUMP2_PIN 48
 #define PUMP3_PIN 19
 #define PUMP4_PIN 27
 #define PUMP5_PIN 28

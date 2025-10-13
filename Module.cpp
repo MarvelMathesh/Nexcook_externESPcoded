@@ -13,11 +13,11 @@ extern const int stepDelay = 2000; // microseconds between steps (adjust for spe
 // Hopper settings
 const int HOPPER_STEPS_PER_REV = 200;
 const int HOPPER_STEP_DELAY = 800; // microseconds
-
+/*
 //forward declarations of functions for spice dispenser
 void moveStepperToPosition(int targetDegrees);
 void runMotorA(bool forward, int duration);
-void runMotorBUntilWeight(float targetWeight);
+void runMotorBUntilWeight(float targetWeight);*/
 
 //forward declarations for hopper functions
 void moveHopperStepperForward();
@@ -32,7 +32,7 @@ void motorC_reverse();
 void motorC_stop();
 
 void SpiceDispenser::start()
-{
+{/*
  if(id==0){
     moveStepperToPosition(0);
  } else if(id==1){
@@ -57,7 +57,7 @@ void SpiceDispenser::start()
 
   //move stepper back to home (0 deg)
   moveStepperToPosition(0);
-
+*/
 
 }
 void SpiceDispenser::stop()
@@ -208,7 +208,7 @@ void Cleaning::stop()
   
 }
 
-
+/*
 //spice dispenser functions
 void moveStepperToPosition(int targetDegrees) {
   int currentPosition = 0; // Assuming we start at 0
@@ -289,7 +289,7 @@ void runMotorBUntilWeight(float targetWeight) {
   Serial.print("Motor B stopped. Final weight: ");
   Serial.print(currentWeight);
   Serial.println(" g");
-}
+}*/
 
 // ================= HOPPER FUNCTIONS =================
 
