@@ -165,14 +165,14 @@ void Steamer::stop()
 
 void Stirrer::start()
 {
-  digitalWrite(IN1, HIGH);
+  /*digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
-  analogWrite(ENA, 200);
+  analogWrite(ENA, 200);*/
 }
 
 void Stirrer::stop()
 {
-   analogWrite(ENA, 0);
+   //analogWrite(ENA, 0);
 
 }
 
