@@ -31,48 +31,35 @@ void setup()
     // Initialize Serial2 with specific pins for slave communication
     Serial2.begin(115200, SERIAL_8N1, SLAVE_RX_PIN, SLAVE_TX_PIN);
 
-    /*
     // stirrer
     pinMode(ENA, OUTPUT);
     pinMode(IN1, OUTPUT);
     pinMode(IN2, OUTPUT);
 
-    // spice dispenser
-    pinMode(DIR_PIN, OUTPUT);
-    pinMode(STEP_PIN, OUTPUT);
-    pinMode(IN1_PIN, OUTPUT);
-    pinMode(IN2_PIN, OUTPUT);
-    pinMode(IN3_PIN, OUTPUT);
-    pinMode(IN4_PIN, OUTPUT);
-    pinMode(ENA_PIN, OUTPUT);
-    pinMode(ENB_PIN, OUTPUT);
+    // spice dispenser motors
+    pinMode(POSITION_ENA, OUTPUT);
+    pinMode(POSITION_IN1, OUTPUT);
+    pinMode(POSITION_IN2, OUTPUT);
+    pinMode(RACK_ENB, OUTPUT);
+    pinMode(RACK_IN3, OUTPUT);
+    pinMode(RACK_IN4, OUTPUT);
+    pinMode(DISPENSE_ENA, OUTPUT);
+    pinMode(DISPENSE_IN1, OUTPUT);
+    pinMode(DISPENSE_IN2, OUTPUT);
+    pinMode(ACTUATOR_ENB, OUTPUT);
+    pinMode(ACTUATOR_IN3, OUTPUT);
+    pinMode(ACTUATOR_IN4, OUTPUT);
 
-    // hopper motor
-    pinMode(ENC_PIN, OUTPUT);
-    pinMode(INC1_PIN, OUTPUT);
-    pinMode(INC2_PIN, OUTPUT);
-
+    // Initialize HX711 load cell
     scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
     scale.set_scale(calibration_factor);
     scale.tare();
-
-    // Set pump pins as OUTPUT
-    pinMode(PUMP1_PIN, OUTPUT);
-    pinMode(PUMP2_PIN, OUTPUT);
-    pinMode(PUMP3_PIN, OUTPUT);
-    pinMode(PUMP4_PIN, OUTPUT);
-    pinMode(PUMP5_PIN, OUTPUT);
-    pinMode(PUMP6_PIN, OUTPUT);
-    pinMode(PUMP7_PIN, OUTPUT);
-
-    // Ensure all pumps are OFF initially
-    digitalWrite(PUMP1_PIN, LOW);
-    digitalWrite(PUMP2_PIN, LOW);
-    digitalWrite(PUMP3_PIN, LOW);
-    digitalWrite(PUMP4_PIN, LOW);
-    digitalWrite(PUMP5_PIN, LOW);
-    digitalWrite(PUMP6_PIN, LOW);
-    digitalWrite(PUMP7_PIN, LOW);*/
+    
+    // Stop all spice dispenser motors initially
+    spicedis.stopPositionMotor();
+    spicedis.stopRackMotor();
+    spicedis.stopDispenseMotor();
+    spicedis.stopActuatorMotor();
 }
 
 void loop()
@@ -173,7 +160,6 @@ void parseAndExecute(String command)
         if (value >= 0)
             spicedis.weight = value;
         spicedis.start();
-        delay(5000);
         Serial.println("Status: spice Done");
     }
     else if (name == "hopper")
