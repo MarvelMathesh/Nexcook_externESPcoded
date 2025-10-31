@@ -5,7 +5,11 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-//---------Liquid Dispenser PinOut------------------
+// UART Communication
+#define UART_RX_PIN 19
+#define UART_TX_PIN 20
+
+// Liquid Dispenser
 #define PUMP1_PIN 5
 #define PUMP2_PIN 6
 #define PUMP3_PIN 7
@@ -13,80 +17,57 @@
 #define PUMP5_PIN 9
 #define PUMP6_PIN 17
 #define PUMP7_PIN 11
-#define ONE_WIRE_BUS 12 // DS18B20 data pin for Peltier temperature control
-#define RELAY_PIN 10    // Peltier relay control pin (active HIGH)
+#define ONE_WIRE_BUS 12
+#define RELAY_PIN 10
 
-// OneWire and temperature sensor setup
+// Hopper System
+#define SERVO_PIN 13
+#define DC_IN1 9
+#define DC_IN2 46
+#define DC_EN 4
+#define GRINDER_IN1 35
+#define GRINDER_IN2 36
+#define GRINDER_EN 14
+#define ACT_IN1 3
+#define ACT_IN2 8
+#define ACT_ENA 12
+#define ACT_SPEED 255
+
+// Stepper motor pin configurations
+const int STEPPER1_PINS[4] = {39, 40, 37, 38}; // Spinach
+const int STEPPER2_PINS[4] = {17, 18, 16, 15};
+const int STEPPER3_PINS[4] = {41, 42, 2, 1};
+const int STEPS_PER_REV = 2048;
+const long STEPPER1_STEPS = 341;
+const long STEPPER2_STEPS = 512;
+const long STEPPER3_STEPS = 682;
+
+// Grinder timing configuration
+const unsigned long GRINDER_ON_MS = 3000UL;
+const unsigned long GRINDER_OFF_MS = 1000UL;
+const int GRINDER_PULSE_COUNT = 3;
+const unsigned long INTER_DELAY = 2000UL;
+const int PUMP_ON_TIME = 5000;
+const int PUMP_OFF_DELAY = 1000;
+
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 float temperature = 0.0;
 
-int onTime = 5000;   // 5 seconds ON (in ms)
-int offDelay = 1000; // 2 seconds OFF delay between pumps (in ms)
-
-//------------UART communication pins-----------------
-#define UART_RX_PIN 19 // Serial1 RX pin (connect to master's Serial2 TX)
-#define UART_TX_PIN 20 // Serial1 TX pin (connect to master's Serial2 RX)
+Servo myServo;
+Stepper stepper1(STEPS_PER_REV, STEPPER1_PINS[0], STEPPER1_PINS[2], STEPPER1_PINS[1], STEPPER1_PINS[3]);
+Stepper stepper2(STEPS_PER_REV, STEPPER2_PINS[0], STEPPER2_PINS[2], STEPPER2_PINS[1], STEPPER2_PINS[3]);
+Stepper stepper3(STEPS_PER_REV, STEPPER3_PINS[0], STEPPER3_PINS[2], STEPPER3_PINS[1], STEPPER3_PINS[3]);
 
 String inputBuffer = "";
 
-//---------------HOPPER SYSTEM PIN DEFINITIONS--------------
-// ---------- Pin Definitions (same as before) ----------
-// Stepper Motors (4-wire to ULN2003)
-const int stepper1Pins[4] = {39, 40, 37, 38}; //spinach
-const int stepper2Pins[4] = {17, 18, 16, 15}; //toor dal
-const int stepper3Pins[4] = {41, 42, 2, 1};   //cashew 
-
-// Servo
-const int servoPin = 13;
-
-// DC Motor (IN1, IN2) - single DC motor
-const int dcPins[3] = {9, 46, 4}; // DC: IN1, IN2 ,EN
-
-// Grinder DC Motor (IN1, IN2)
-const int grinderPins[3] = {35, 36, 14}; // Grinder: IN1, IN2, EN
-
-// Grinder DC Motor (IN1, IN2)
-//const int actuatorPins[3] = {3, 8, 12}; // Actuator: IN1, IN2, EN
-const int ACT_IN1 = 3; 
-const int ACT_IN2 = 8; 
-const int ACT_ENA = 12; 
-const int ACT_SPEED = 255; 
-
-// ---------- Motor Objects & Settings ----------
-Servo myServo;
-const int stepsPerRev = 2048; // 28BYJ-48 geared stepper
-Stepper stepper1(stepsPerRev, stepper1Pins[0], stepper1Pins[2], stepper1Pins[1], stepper1Pins[3]);
-Stepper stepper2(stepsPerRev, stepper2Pins[0], stepper2Pins[2], stepper2Pins[1], stepper2Pins[3]);
-Stepper stepper3(stepsPerRev, stepper3Pins[0], stepper3Pins[2], stepper3Pins[1], stepper3Pins[3]);
-
-// Steps to move (you used these earlier — adjust if needed)
-const long stepper1Steps = 341; // ~60 degrees
-const long stepper2Steps = 512; // ~90 degrees
-const long stepper3Steps = 682; // ~120 degrees
-
-// Grinder timings
-const unsigned long grinderOnMs = 3000UL;  // 3 s ON per pulse
-const unsigned long grinderOffMs = 1000UL; // 1 s OFF between pulses
-const int grinderPulseCount = 3;           // 3 pulses
-
-// Actautor timings
-const unsigned long actuatorMs = 7000UL; // 7 s ON per pulse
-
-// Inter-item pause
-const unsigned long interDelay = 2000UL; // 2 seconds pause between each action
-
-void setup()
-{
-  // Initialize Serial for debug output
+void setup() {
+  // Initialize serial communications
   Serial.begin(115200);
   Serial.println("ESP32-S3 UART Slave Started");
-
-  // Initialize Serial2 for communication with master (use specific pins)
   Serial2.begin(115200, SERIAL_8N1, UART_RX_PIN, UART_TX_PIN);
 
-  //-------------Liquid Dispenser Setup----------------
-  // Set pump pins as OUTPUT
+  // Configure pump pins
   pinMode(PUMP1_PIN, OUTPUT);
   pinMode(PUMP2_PIN, OUTPUT);
   pinMode(PUMP3_PIN, OUTPUT);
@@ -96,7 +77,6 @@ void setup()
   pinMode(PUMP7_PIN, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
 
-  // Ensure all pumps are OFF initially
   digitalWrite(PUMP1_PIN, LOW);
   digitalWrite(PUMP2_PIN, LOW);
   digitalWrite(PUMP3_PIN, LOW);
@@ -104,198 +84,182 @@ void setup()
   digitalWrite(PUMP5_PIN, LOW);
   digitalWrite(PUMP6_PIN, LOW);
   digitalWrite(PUMP7_PIN, LOW);
-  digitalWrite(RELAY_PIN, LOW); // Start with Peltier OFF
+  digitalWrite(RELAY_PIN, LOW);
 
-  // Initialize temperature sensor
   sensors.begin();
 
-  //--------------HOPPER SETUP-------------
-  // Stepper speed (Stepper library: speed is in RPM; keep low for 28BYJ-48)
+  // Configure stepper motors
   stepper1.setSpeed(10);
   stepper2.setSpeed(10);
   stepper3.setSpeed(10);
 
-  // Servo attach
-  myServo.attach(servoPin);
+  // Initialize servo
+  myServo.attach(SERVO_PIN);
   myServo.write(0);
 
-  // DC motor pins as outputs
-  for (int i = 0; i < 3; ++i)
-  {
-    pinMode(dcPins[i], OUTPUT);
-    pinMode(grinderPins[i], OUTPUT);
-  }
-  
-  //actuator
+  // Configure DC motor pins
+  pinMode(DC_IN1, OUTPUT);
+  pinMode(DC_IN2, OUTPUT);
+  pinMode(DC_EN, OUTPUT);
+  pinMode(GRINDER_IN1, OUTPUT);
+  pinMode(GRINDER_IN2, OUTPUT);
+  pinMode(GRINDER_EN, OUTPUT);
   pinMode(ACT_IN1, OUTPUT);
   pinMode(ACT_IN2, OUTPUT);
   pinMode(ACT_ENA, OUTPUT);
 
-  // Ensure motors off initially
-  stopDC(dcPins);
-  stopDC(grinderPins);
+  stopDC(DC_IN1, DC_IN2, DC_EN);
+  stopDC(GRINDER_IN1, GRINDER_IN2, GRINDER_EN);
 }
-//----------Liquid Dispenser Helper Functions------------
 
-// Temperature check for peltier (called on every module call to maintain temperature throughout the operation)
-void checkAndControlPeltier()
-{
-  sensors.requestTemperatures(); // Get new temperature reading
+void loop() {
+  // Read commands from master ESP
+  while (Serial2.available() > 0) {
+    char c = Serial2.read();
+    if (c == '\n' || c == '\r') {
+      if (inputBuffer.length() > 0) {
+        inputBuffer.trim();
+        if (inputBuffer.length() > 0) {
+          Serial.println(inputBuffer);
+          if (inputBuffer.startsWith("MODULE:")) {
+            parseAndExecute(inputBuffer.substring(7));
+          }
+        }
+        inputBuffer = "";
+      }
+    } else {
+      inputBuffer += c;
+    }
+  }
+}
+
+// Monitor and control Peltier cooler
+void checkAndControlPeltier() {
+  sensors.requestTemperatures();
   temperature = sensors.getTempCByIndex(0);
-
   Serial.print("Current Temperature: ");
   Serial.print(temperature);
   Serial.println(" °C");
 
-  if (temperature < 25.5)
-  {
-    // Too cold — turn OFF Peltier
+  if (temperature < 25.5) {
     digitalWrite(RELAY_PIN, LOW);
     Serial.println("Peltier OFF (below 20°C)");
-  }
-  else
-  {
-    // Warm enough — turn ON Peltier
+  } else {
     digitalWrite(RELAY_PIN, HIGH);
     Serial.println("Peltier ON (above 20°C)");
   }
 }
 
-//-------------Hopper Helper Functions--------------------
-
-void grind()
-{
-  Serial.println("Grinder: " + String(grinderPulseCount) + " pulses of 3s ON / 1s OFF");
-  for (int p = 1; p <= grinderPulseCount; ++p)
-  {
+// Grinder sequence with servo release
+void grind() {
+  Serial.println("Grinder: " + String(GRINDER_PULSE_COUNT) + " pulses of 3s ON / 1s OFF");
+  for (int p = 1; p <= GRINDER_PULSE_COUNT; ++p) {
     Serial.printf("Grinder pulse %d: ON\n", p);
-    setDCForward(grinderPins);
-    delay(grinderOnMs);
-    stopDC(grinderPins);
+    setDCForward(GRINDER_IN1, GRINDER_IN2, GRINDER_EN);
+    delay(GRINDER_ON_MS);
+    stopDC(GRINDER_IN1, GRINDER_IN2, GRINDER_EN);
     Serial.printf("Grinder pulse %d: OFF\n", p);
-    if (p < grinderPulseCount)
-      delay(grinderOffMs); // wait between pulses
+    if (p < GRINDER_PULSE_COUNT)
+      delay(GRINDER_OFF_MS);
   }
-  servoSweepBlocking(0, 90, 2); // step delay 2 ms for smoothness
+  servoSweepBlocking(0, 90, 2);
   delay(1000);
   servoSweepBlocking(90, 0, 2);
   Serial.println("Servo done.");
   Serial.println("Grinder sequence done.");
 }
 
+// Generic motor control with direction
 void moveMotor(int in1Pin, int in2Pin, int enaPin, int direction, int speed) {
-  
-  // Ensure speed is within 8-bit range
   if (speed < 0) speed = 0;
   if (speed > 255) speed = 255;
 
-  if (direction == 1) { // Forward
+  if (direction == 1) {
     digitalWrite(in1Pin, HIGH);
     digitalWrite(in2Pin, LOW);
     analogWrite(enaPin, speed);
-  } else if (direction == -1) { // Backward (Retract)
+  } else if (direction == -1) {
     digitalWrite(in1Pin, LOW);
     digitalWrite(in2Pin, HIGH);
     analogWrite(enaPin, speed);
-  } else { // Stop (Brake)
+  } else {
     digitalWrite(in1Pin, LOW);
     digitalWrite(in2Pin, LOW);
     analogWrite(enaPin, 0);
   }
 }
 
-void cutter()
-{
-// 5s forward (extend)
+// Actuator cutting sequence
+void cutter() {
   Serial.println("  Extending...");
   moveMotor(ACT_IN1, ACT_IN2, ACT_ENA, 1, ACT_SPEED);
   delay(5000);
   
-  // 2s hold (stop)
   Serial.println("  Holding...");
   moveMotor(ACT_IN1, ACT_IN2, ACT_ENA, 0, 0);
   delay(2000);
   
-  // 5s retract (backward)
   Serial.println("  Retracting...");
   moveMotor(ACT_IN1, ACT_IN2, ACT_ENA, -1, ACT_SPEED);
   delay(5000);
   
-  // Stop
   moveMotor(ACT_IN1, ACT_IN2, ACT_ENA, 0, 0);
-  Serial.println("Actuator Sequence Complete.");
+  Serial.println("Actuator Sequence Complete.");
 }
 
-void moveStepperBlocking(Stepper &stp, long stepsToMove)
-{
-  // move() is blocking for Stepper library; we'll step one-by-one to be a bit gentler
+// Move stepper motor with smooth stepping
+void moveStepperBlocking(Stepper &stp, long stepsToMove) {
   long remaining = stepsToMove;
-  while (remaining > 0)
-  {
-    stp.step(1); // single step
+  while (remaining > 0) {
+    stp.step(1);
     --remaining;
-    delay(1); // tiny pause to avoid hammering CPU (and smooth motion)
+    delay(1);
   }
 }
 
-void servoSweepBlocking(int fromDeg, int toDeg, unsigned long stepDelayMs)
-{
-  if (fromDeg < toDeg)
-  {
-    for (int pos = fromDeg; pos <= toDeg; ++pos)
-    {
+// Smooth servo movement
+void servoSweepBlocking(int fromDeg, int toDeg, unsigned long stepDelayMs) {
+  if (fromDeg < toDeg) {
+    for (int pos = fromDeg; pos <= toDeg; ++pos) {
       myServo.write(pos);
       delay(stepDelayMs);
     }
-  }
-  else
-  {
-    for (int pos = fromDeg; pos >= toDeg; --pos)
-    {
+  } else {
+    for (int pos = fromDeg; pos >= toDeg; --pos) {
       myServo.write(pos);
       delay(stepDelayMs);
     }
   }
 }
 
-// DC helper: set forward (IN1=HIGH, IN2=LOW, EN=HIGH)
-void setDCForward(const int dc[3])
-{
-  digitalWrite(dc[0], HIGH);
-  digitalWrite(dc[1], LOW);
-  digitalWrite(dc[2], HIGH);
+// DC motor direction control helpers
+void setDCForward(int in1, int in2, int en) {
+  digitalWrite(in1, HIGH);
+  digitalWrite(in2, LOW);
+  digitalWrite(en, HIGH);
 }
 
-void setDCBackward(const int dc[3])
-{
-  digitalWrite(dc[0], LOW);
-  digitalWrite(dc[1], HIGH);
-  digitalWrite(dc[2], HIGH);
+void setDCBackward(int in1, int in2, int en) {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, HIGH);
+  digitalWrite(en, HIGH);
 }
 
-// DC helper: stop
-void stopDC(const int dc[3])
-{
-  digitalWrite(dc[0], LOW);
-  digitalWrite(dc[1], LOW);
-  digitalWrite(dc[2], LOW);
+void stopDC(int in1, int in2, int en) {
+  digitalWrite(in1, LOW);
+  digitalWrite(in2, LOW);
+  digitalWrite(en, LOW);
 }
 
-void parseAndExecute(String command)
-{
-  if (command.startsWith("MODULE:"))
-    command.remove(0, 7);
-
+void parseAndExecute(String command) {
   command.trim();
 
-  // Parse single command format: name|id|value
+  // Parse command format: name|id|value
   String parts[3];
   int seg = 0, start = 0;
-  while (seg < 3)
-  {
+  while (seg < 3) {
     int bar = command.indexOf('|', start);
-    if (bar == -1)
-    {
+    if (bar == -1) {
       parts[seg++] = command.substring(start);
       break;
     }
@@ -311,107 +275,59 @@ void parseAndExecute(String command)
 
   checkAndControlPeltier();
 
-  if (name == "liquid")
-  {
-    if (id == 0)
-    { 
-      //-----------Oil Dispenser-----------
+  // Handle liquid dispensing
+  if (name == "liquid") {
+    if (id == 0) {
       digitalWrite(PUMP1_PIN, HIGH);
-      delay(onTime);
+      delay(PUMP_ON_TIME);
       digitalWrite(PUMP1_PIN, LOW);
-    }
-    else
-    { 
-      //-------- Water Dispenser------------
+    } else {
       digitalWrite(PUMP2_PIN, HIGH);
-      delay(onTime);
+      delay(PUMP_ON_TIME);
       digitalWrite(PUMP2_PIN, LOW);
     }
-
     Serial.println("Status: liquid Done");
-  }
-  else if (name == "hopper")
-  {
-    if (id == 0)
-    {
-      //-------------spinach----------------
+  // Handle hopper operations
+  } else if (name == "hopper") {
+    // Spinach with grinding
+    if (id == 0) {
       Serial.println("Moving Spinach Stepper");
-      moveStepperBlocking(stepper1, stepper1Steps);
+      moveStepperBlocking(stepper1, STEPPER1_STEPS);
       Serial.println("Turning on Spinach Pumps");
       digitalWrite(PUMP3_PIN, HIGH);
-      delay(onTime);
+      delay(PUMP_ON_TIME);
       digitalWrite(PUMP3_PIN, LOW);
       digitalWrite(PUMP4_PIN, HIGH);
-      delay(onTime);
+      delay(PUMP_ON_TIME);
       digitalWrite(PUMP4_PIN, LOW);
       grind();
-    }
-    else if (id == 1)
-    {
-      //--------------Cashew-------------------
+    // Cashew with grinding
+    } else if (id == 1) {
       Serial.println("Moving cashew Stepper");
-      moveStepperBlocking(stepper3, stepper1Steps);
+      moveStepperBlocking(stepper3, STEPPER1_STEPS);
       grind();
-    }
-    else if (id == 2)
-    {
-      //-----------Toor Dal------------------
+    // Toor dal with pumps
+    } else if (id == 2) {
       Serial.println("Moving toor dal stepper");
-      moveStepperBlocking(stepper2, stepper2Steps);
+      moveStepperBlocking(stepper2, STEPPER2_STEPS);
       digitalWrite(PUMP5_PIN, HIGH);
-      delay(onTime);
+      delay(PUMP_ON_TIME);
       digitalWrite(PUMP5_PIN, LOW);
-
       digitalWrite(PUMP6_PIN, HIGH);
-      delay(onTime);
+      delay(PUMP_ON_TIME);
       digitalWrite(PUMP6_PIN, LOW);
-      // delay(offDelay);
-    }
-    else if (id == 3)
-    {
-      //------------ONION & TOMATO---------------
+    // Tomato/onion with cutting
+    } else if (id == 3) {
       Serial.println("Tomato DC motors...");
-      setDCForward(dcPins);
+      setDCForward(DC_IN1, DC_IN2, DC_EN);
       delay(5000);
-      setDCBackward(dcPins);
+      setDCBackward(DC_IN1, DC_IN2, DC_EN);
       delay(5000);
-      stopDC(dcPins);
+      stopDC(DC_IN1, DC_IN2, DC_EN);
       cutter();
     }
     Serial.println("Status: hopper Done");
-  }
-  else
-  {
+  } else {
     Serial.println("Status: " + name + " Done");
-  }
-}
-
-void loop()
-{
-  // Read all available data from Serial2
-  while (Serial2.available() > 0)
-  {
-    char c = Serial2.read();
-    if (c == '\n' || c == '\r')
-    {
-      if (inputBuffer.length() > 0)
-      {
-        inputBuffer.trim();
-        if (inputBuffer.length() > 0)
-        {
-          Serial.println(inputBuffer); // Display received command on USB UART
-
-          if (inputBuffer.startsWith("MODULE:"))
-          {
-            parseAndExecute(inputBuffer.substring(7));
-          }
-        }
-        inputBuffer = ""; // Clear buffer for next command
-      }
-    }
-    else
-    {
-      inputBuffer += c;
-    }
   }
 }
