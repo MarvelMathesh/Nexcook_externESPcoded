@@ -22,8 +22,28 @@ class SpiceDispenser : public Module
 public:
   void start() override;
   void stop() override;
+  void dispenseSpice(int spiceID, float targetWeight);
+  void movePositionMotor(int speed, bool forward);
+  void stopPositionMotor();
+  void moveRackMotor(int speed, bool forward);
+  void stopRackMotor();
+  void moveDispenseMotor(int speed, bool forward);
+  void stopDispenseMotor();
+  void moveActuatorMotor(int speed, bool forward);
+  void stopActuatorMotor();
+  
   int weight;
   int id;
+  
+  // Configuration constants
+  static const int MOTOR_SPEED = 200;
+  static const int RACK_FORWARD_TIME = 2000;
+  static const int RACK_BACKWARD_TIME = 2000;
+  static const int ACTUATOR_TIME = 5000;
+  static const int TURMERIC_TIME = 5000;
+  static const int SALT_TIME = 10000;
+  static const int CHILI_TIME = 15000;
+  static const int PEPPER_TIME = 20000;
 };
 
 class Hopper : public Module
