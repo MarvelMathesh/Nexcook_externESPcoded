@@ -5,6 +5,7 @@ HX711 scale;
 float calibration_factor = -7050;
 
 // UART SETUP for slave communication
+
 #define SLAVE_RX_PIN 19 // Serial2 RX pin (connect to slave's Serial2 TX pin 17)
 #define SLAVE_TX_PIN 20 // Serial2 TX pin (connect to slave's Serial2 RX pin 16)
 
@@ -181,7 +182,6 @@ void parseAndExecute(String command)
             hopper.id = id;
         if (value >= 0)
             hopper.weight = value;
-        //hopper.start();
 
         // Send command to slave via Serial2
         String slaveCommand = "MODULE:" + command;
@@ -197,10 +197,10 @@ void parseAndExecute(String command)
     }
     else if (name == "stirrer")
     {
-        stirrer.start();
+        //stirrer.start();
         // Remove or reduce delay to prevent blocking
         delay(5000);
-        stirrer.stop();
+        //stirrer.stop();
         Serial.println("Status: stirrer Done");
     }
     else if (name == "chop")
